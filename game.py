@@ -1,5 +1,7 @@
 import pygame
 from menu import Button, Menu
+from connection_menu import ConnectionMenu
+
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
 GRID_SIZE = 8
@@ -12,7 +14,8 @@ BLUE = (0, 0, 255)
 
 # Game state constants
 STATE_MENU = 0
-STATE_GAME = 1
+STATE_CONNECTION = 1
+STATE_GAME = 2
 
 
 class Square:
@@ -165,9 +168,11 @@ running = True
 # Menu and game state
 game_state = STATE_MENU
 menu = Menu()
+connection_menu = ConnectionMenu(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 #game loop
 while running:
+    dt = clock.tick(60)  # Delta time in milliseconds
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
@@ -176,23 +181,34 @@ while running:
     screen.fill(WHITE)
     
     if game_state == STATE_MENU:
-        #action is button pressed string name
         action = menu.update(events)
         menu.draw(screen)
         if action == "host":
-            game_state = STATE_GAME
-            print("Starting game as host")
-            
+            game_state = STATE_CONNECTION
+            connection_menu.set_mode("host")
+            print("Opening host setup...")
         elif action == "join":
+            game_state = STATE_CONNECTION
+            connection_menu.set_mode("join")
+            print("Opening join setup...")
+            
+    elif game_state == STATE_CONNECTION:
+        action = connection_menu.update(events, dt)
+        connection_menu.draw(screen)
+        if action == "back":
+            game_state = STATE_MENU
+        elif action == "start_game" or action == "wait_for_host":
+            if action == "start_game":
+                print("Starting game as host...")
+            else:
+                print("Waiting for host to start game...")
             game_state = STATE_GAME
-            print("Joining game as client")
             
     elif game_state == STATE_GAME:
         update_game(events)
         draw_game(screen)
     
     pygame.display.flip()
-    clock.tick(60)
 
 pygame.quit()
 

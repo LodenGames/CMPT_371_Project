@@ -6,6 +6,7 @@ button_color = (0, 128, 255)
 button_hover = (0, 119, 239)
 button_height = 100
 button_width = 175
+
 class Button:
     def __init__(self, x, y, text):
         self.rect = pygame.Rect(x, y, button_width, button_height)
@@ -13,8 +14,9 @@ class Button:
         self.color = button_color
         self.hover_color = button_hover
         self.is_hovered = False
+        self.button_font = pygame.font.SysFont('Arial', 30)
         
-    def draw(self, surface, font):
+    def draw(self, surface):
         # Draw button with hover effect
         current_color = None
         if self.is_hovered:
@@ -24,7 +26,7 @@ class Button:
         pygame.draw.rect(surface, current_color, self.rect, border_radius=10)  # Button background
         
         # Render text
-        text_surface = font.render(self.text, True, BLACK)
+        text_surface =  self.button_font.render(self.text, True, BLACK)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
         
@@ -37,7 +39,6 @@ class Button:
 class Menu:
     def __init__(self):
         self.title_font = pygame.font.SysFont('Arial', 50, bold=True)
-        self.button_font = pygame.font.SysFont('Arial', 30)
         
         # Create buttons
         center_x = SCREEN_WIDTH // 2 - button_width // 2
@@ -72,5 +73,5 @@ class Menu:
         surface.blit(title_text, title_rect)
         
         # Draw buttons
-        self.host_button.draw(surface, self.button_font)
-        self.join_button.draw(surface, self.button_font)
+        self.host_button.draw(surface)
+        self.join_button.draw(surface)
