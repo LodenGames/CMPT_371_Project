@@ -1,18 +1,9 @@
 import pygame
-from menu import Button, Menu
+from menu import Menu
 from connection_menu import ConnectionMenu
+from constants import *
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 800
-GRID_SIZE = 8
-SQUARE_SIZE = SCREEN_WIDTH // GRID_SIZE
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GRAY = (200, 200, 200)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-
-# Game state constants
+#game state
 STATE_MENU = 0
 STATE_CONNECTION = 1
 STATE_GAME = 2
@@ -46,15 +37,15 @@ class Square:
 
     def end_scribble(self):
         if self.being_scribbled:
-            # Calculate the percentage filled
+            #Calculate how filled the square is
             percentage_filled = (self.filled_pixels / self.total_pixels) * 100 
             
             if percentage_filled >= 50:
-                # Claim the square
+                #claim square
                 self.owner = self.scribbling_player
                 self.color = self.scribbling_player.color
             else:
-                # Reset the square
+                #reset square if not filled enough
                 self.square_surface.fill(WHITE)
                 self.filled_pixels = 0
                 
@@ -98,7 +89,6 @@ class Square:
     def sequence(self, pos, player):
          if not self.point_in_square(pos):
             return
-         
          if self.being_scribbled: 
             self.draw_scribble(pos, player.color)
             self.calculate_filled_pixels(player.color)
@@ -112,10 +102,10 @@ class Player:
 
 board = []
 for row in range(GRID_SIZE):
-            row_squares = []
-            for col in range(GRID_SIZE):
-                row_squares.append(Square(row, col))
-            board.append(row_squares)
+        row_squares = []
+        for col in range(GRID_SIZE):
+            row_squares.append(Square(row, col))
+        board.append(row_squares)
 
 def draw_game(surface):
         for row in board:
@@ -133,17 +123,11 @@ player1 = Player(RED)  # Red
 player2 = Player(BLUE)  # Blue 
 
 def update_game(events):
-        global running
-        
         for event in events:
-            if event.type == pygame.QUIT:
-                running = False
-                
             pos = pygame.mouse.get_pos()
             square = get_square_at_position(pos)
             if square is None:
                 continue
-                
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 print("Mouse Down")
                 square.start_scribble(player1)
@@ -208,6 +192,7 @@ while running:
         update_game(events)
         draw_game(screen)
     
+    #draw surface into screen
     pygame.display.flip()
 
 pygame.quit()
