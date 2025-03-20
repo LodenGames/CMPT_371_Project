@@ -1,5 +1,5 @@
 import pygame
-
+from menu import Button, Menu
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
 GRID_SIZE = 8
@@ -7,6 +7,12 @@ SQUARE_SIZE = SCREEN_WIDTH // GRID_SIZE
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+
+# Game state constants
+STATE_MENU = 0
+STATE_GAME = 1
 
 
 class Square:
@@ -59,9 +65,10 @@ class Square:
         return (self.x <= pos[0] < self.x + self.width and
                 self.y <= pos[1] < self.y + self.height)
 
-    #put this into a method the position checker
+
     def draw_scribble(self, pos, color):
         if self.being_scribbled and self.point_in_square(pos):
+            #draw relative to the square's position
             pygame.draw.circle(self.square_surface, color, 
                               (pos[0] - self.x, pos[1] - self.y), self.brushSize)
     
@@ -70,8 +77,8 @@ class Square:
         self.filled_pixels = 0
         for x in range(self.width):
             for y in range(self.height):
-                color = self.square_surface.get_at((x, y))  # Get (R, G, B, A) tuple
-                if color[:3] != WHITE:  # Ignore alpha, compare only (R, G, B)
+                color = self.square_surface.get_at((x, y))  # Get rgb color of pixel
+                if color[:3] != WHITE:  #compare only rgb 
                     self.filled_pixels += 1
         print(self.filled_pixels) #for debugging 
 
@@ -98,6 +105,7 @@ class Player:
     def __init__(self, color):
         self.color = color
         self.current_square = None
+        self.score = 0
 
 board = []
 for row in range(GRID_SIZE):
@@ -106,7 +114,7 @@ for row in range(GRID_SIZE):
                 row_squares.append(Square(row, col))
             board.append(row_squares)
 
-def draw(surface):
+def draw_game(surface):
         for row in board:
             for square in row:
                 square.draw(surface)
@@ -118,26 +126,35 @@ def get_square_at_position(pos):
             return board[row][col]
         return None
 
-player1 = Player((255, 0, 0))  # Red
+player1 = Player(RED)  # Red
+player2 = Player(BLUE)  # Blue 
 
-def update():
-            global running
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                pos = pygame.mouse.get_pos()
-                if get_square_at_position(pos) is None:
-                    continue
-                square = get_square_at_position(pos)
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    print("Mouse Down")
-                    square.start_scribble(player1)
-                    player1.current_square = square
-                elif event.type == pygame.MOUSEMOTION:
-                    if pygame.mouse.get_pressed()[0]:  # Left button held
-                         player1.current_square.sequence(pos, player1)
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                     player1.current_square.end_scribble()
+def update_game(events):
+        global running
+        
+        for event in events:
+            if event.type == pygame.QUIT:
+                running = False
+                
+            pos = pygame.mouse.get_pos()
+            square = get_square_at_position(pos)
+            if square is None:
+                continue
+                
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                print("Mouse Down")
+                square.start_scribble(player1)
+                player1.current_square = square
+            elif event.type == pygame.MOUSEMOTION:
+                if pygame.mouse.get_pressed()[0]:  # Left button held
+                    if player1.current_square is not None:
+                        player1.current_square.sequence(pos, player1)
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if player1.current_square is not None:
+                    player1.current_square.end_scribble()
+                    if player1.current_square.owner is not None:
+                        player1.score += 1
+                    player1.current_square = None
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -145,11 +162,35 @@ pygame.display.set_caption("Deny and Conquer")
 clock = pygame.time.Clock()
 running = True
 
+# Menu and game state
+game_state = STATE_MENU
+menu = Menu()
 
+#game loop
 while running:
+    events = pygame.event.get()
+    for event in events:
+        if event.type == pygame.QUIT:
+            running = False
+    
     screen.fill(WHITE)
-    update()
-    draw(screen)
+    
+    if game_state == STATE_MENU:
+        #action is button pressed string name
+        action = menu.update(events)
+        menu.draw(screen)
+        if action == "host":
+            game_state = STATE_GAME
+            print("Starting game as host")
+            
+        elif action == "join":
+            game_state = STATE_GAME
+            print("Joining game as client")
+            
+    elif game_state == STATE_GAME:
+        update_game(events)
+        draw_game(screen)
+    
     pygame.display.flip()
     clock.tick(60)
 
