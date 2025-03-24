@@ -4,12 +4,6 @@ from constants import *
 from gamestate import Gamestate
 from models import Player
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('0.0.0.0', 44444))
-server.listen()
-game_state = Gamestate()  #initialize the game state for the server
-player_id_counter = 1  
-
 def handle_single_player(client_socket, player_id):
     new_player = Player(client_socket, player_id)
     game_state.add_player(new_player)
@@ -72,6 +66,9 @@ def handle_single_player(client_socket, player_id):
                 game_state.remove_player(new_player)
                 client_socket.send("Exit accepted".encode())
                 break
+            
+            elif command[0] == "get_id":
+                client_socket.send(str(new_player.id).encode())
 
         except Exception as e:
             print(f"Error: {e}")
@@ -79,6 +76,13 @@ def handle_single_player(client_socket, player_id):
 
     print(f"Player {new_player.id} disconnected.")
     client_socket.close()
+
+#start server
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('0.0.0.0', 44444))
+server.listen()
+game_state = Gamestate()  #initialize the game state for the server
+player_id_counter = 1  
 
 # accept connection
 print("Server started")

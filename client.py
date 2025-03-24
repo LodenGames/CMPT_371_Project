@@ -14,38 +14,13 @@ HEIGHT = BOARD_HEIGHT + HEADER_HEIGHT
 BRUSH_SIZE = 5  #Radius of the brush size when drawing
 FILL_THRESHOLD = 0.5  
 
-#initializing pygame and its properties
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Deny and Conquer")
-
-pygame.font.init()
-font = pygame.font.SysFont('Arial', 20)
-
-#Connect to the server
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 44444))
-
-#inital welcome message
-print(client.recv(1024).decode())
-
-#drawing state variables
-current_square = None  
-drawing = False  
-square_pixels = set()  #pixels drawn in the square
-
-
-players = [] # list of (id, color, score) 
-
-
 def recieve_player_info(client):
-    global players
     data = client.recv(4096).decode()
     players_json = json.loads(data)
     new_players = []
     for p in players_json:
         new_players.append((p[0], p[1], p[2]))
-    players = new_players 
+    return new_players
 
 def receive_board_state(client):
     data = client.recv(4096).decode()
@@ -102,8 +77,8 @@ def draw_board(board):
             else:
                 pygame.draw.rect(screen, WHITE, (board_x, board_y, SQUARE_SIZE, SQUARE_SIZE))
                 
-            # If someone is drawing on the square indicate with half opacity
-            if being_drawn and drawer_color is not None:
+            # If someone else is drawing on the square indicate with half opacity
+            if being_drawn and drawer_id != client_id:
                 # Create a transparent surface
                 transparent_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
                 drawer_rgba = (drawer_color[0], drawer_color[1], drawer_color[2], 128)
@@ -127,6 +102,32 @@ def draw_board(board):
     pygame.display.flip()
 
 
+
+#initializing pygame and its properties
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Deny and Conquer")
+
+pygame.font.init()
+font = pygame.font.SysFont('Arial', 20)
+
+clock = pygame.time.Clock()
+
+#Connect to the server
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(('127.0.0.1', 44444))
+
+#inital welcome message
+print(client.recv(1024).decode())
+
+#drawing state variables
+current_square = None  
+drawing = False  
+square_pixels = set()  #pixels drawn in the square
+
+
+players = [] # list of (id, color, score) 
+
 #Main game loop
 
 board_state = [] #2d list of (Owner, color, being_drawn, drawer_id, drawer_color) 
@@ -139,21 +140,26 @@ for i in range(GRID_SIZE):
     board_state.append(row)  
 
 
-
 client.send("get_players".encode())
-recieve_player_info(client)
+players = recieve_player_info(client)
+
+client.send("get_id".encode())
+client_id = int(client.recv(1024).decode())
 
 
 running = True
 while running:
+
+    #request player and board state at start of each loop
+    client.send("get_players".encode())
+    players = recieve_player_info(client)
+
+    client.send("board".encode())
+    board_state = receive_board_state(client)
+
     # Draw header and board
     draw_header()
     draw_board(board_state)
-    
-
-    client.send("get_players".encode())
-    recieve_player_info(client)
-
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -206,10 +212,7 @@ while running:
             current_square = None
             square_pixels.clear()
         
-            client.send("get_players".encode())
-            players_json = recieve_player_info(client)
-            client.send("board".encode())
-            board_state = receive_board_state(client)
+
         
         elif event.type == pygame.MOUSEMOTION and drawing:
             x, y = pygame.mouse.get_pos()
@@ -235,7 +238,9 @@ while running:
                         if 0 <= pixel_x < SQUARE_SIZE and 0 <= pixel_y < SQUARE_SIZE:
                             square_pixels.add((pixel_x, pixel_y))
 
+    clock.tick(60) #set max fps to 60
 
+#exit message before quiting
 print(client.recv(1024).decode())
 client.close()
 pygame.quit()
