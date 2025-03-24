@@ -2,22 +2,17 @@ import socket
 import pygame
 import sys
 import json
+from constants import *
 
-WIDTH = 800
+#screen dimensions
 HEADER_HEIGHT = 50  #height of the top bar
-BOARD_HEIGHT = 800  
-HEIGHT = HEADER_HEIGHT + BOARD_HEIGHT
-GRID_SIZE = 8
-SQUARE_SIZE = BOARD_HEIGHT // GRID_SIZE
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (128, 255, 0)
-BLUE = (0, 0, 255)
-YELLOW = (255, 255, 0)
+BOARD_HEIGHT = SQUARE_SIZE * GRID_SIZE
+WIDTH = SQUARE_SIZE * GRID_SIZE
+HEIGHT = BOARD_HEIGHT + HEADER_HEIGHT
 
-PLAYER_COLORS = [RED, GREEN, BLUE, YELLOW]
+#for drawing 
 BRUSH_SIZE = 5  #Radius of the brush size when drawing
+FILL_THRESHOLD = 0.5  
 
 #initializing pygame and its properties
 pygame.init()
@@ -38,9 +33,9 @@ print(client.recv(1024).decode())
 current_square = None  
 drawing = False  
 square_pixels = set()  #pixels drawn in the square
-FILL_THRESHOLD = 0.5  
 
-players = []  
+
+players = [] # list of (id, color, score) 
 
 
 def recieve_player_info(client):
