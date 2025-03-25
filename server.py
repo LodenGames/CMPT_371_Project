@@ -4,17 +4,37 @@ from constants import *
 from gamestate import Gamestate
 from models import Player
 
-SQUARES_NEEDED_TO_END_GAME = 2 #should be GRID_SIZE * GRID_SIZE
+SQUARES_NEEDED_TO_END_GAME = 5 #should be GRID_SIZE * GRID_SIZE
 
 def handle_single_player(client_socket, player_id):
     global waiting
     new_player = Player(client_socket, player_id)
     game_state.add_player(new_player)
-    game_state.add_player(Player(None, player_id + 1)) #added 2nd player for testing purposes
+    player2 = Player(None, player_id + 1)
+    player3 = Player(None, player_id + 2)
+    player4 = Player(None, player_id + 3)
+    game_state.add_player(player2) #added 2nd player for testing purposes
+    game_state.add_player(player3) #added 3rd player for testing purposes
+    game_state.add_player(player4) #added 4th player for testing purposes
     print(f"Player {new_player.id} joined with color {new_player.color}")
     client_socket.send(f"Welcome Player {new_player.id}!".encode())
 
     game_board = game_state.board  #get the board of the game state
+
+    #testing purposes start
+    game_board.board[0][0].start_drawing(player2.id, player2.color)
+    game_board.board[1][1].claim(player2.id, player2.color)
+    game_board.board[1][2].claim(player2.id, player2.color)
+    player2.score = 2
+
+    game_board.board[2][2].start_drawing(player3.id, player3.color)
+    game_board.board[2][3].claim(player3.id, player3.color)
+    player3.score = 1
+
+    game_board.board[4][4].start_drawing(player4.id, player4.color)
+    game_board.board[4][5].claim(player4.id, player4.color)
+    player4.score = 1
+    #testing end
 
     while True:
         try:

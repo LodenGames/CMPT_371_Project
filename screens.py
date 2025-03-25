@@ -1,6 +1,8 @@
 import pygame
 from constants import *
 
+#GUI stuff
+
 class Button:
     def __init__(self, x, y, width, height, text):
         self.rect = pygame.Rect(x, y, width, height)
@@ -27,7 +29,10 @@ class Button:
     #updates whether hovered
     def check_hover(self, mouse_pos):
         self.is_hovered = self.rect.collidepoint(mouse_pos)
-        self.current_color = self.hover_color if self.is_hovered else self.color
+        if self.is_hovered:
+            self.current_color = self.hover_color
+        else:
+            self.current_color = self.color
     
     def is_clicked(self, mouse_pos, check_hover=False):
         if check_hover:

@@ -87,7 +87,7 @@ def draw_board(board):
                 
                 #draw transparanet surface
                 transparent_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-                drawer_rgba = (drawer_color[0], drawer_color[1], drawer_color[2], 128)
+                drawer_rgba = (drawer_color[0], drawer_color[1], drawer_color[2], 90)
                 transparent_surface.fill(drawer_rgba)
 
                 screen.blit(transparent_surface, (board_x, board_y))
@@ -115,7 +115,7 @@ font = pygame.font.SysFont('Arial', 20)
 clock = pygame.time.Clock()
 
 #drawing state variables
-current_square = None  
+current_square = None  #(row, col) of the square being drawn
 drawing = False  
 square_pixels = set()  #pixels drawn in the square
 
@@ -132,8 +132,8 @@ board_state = [] #2d list of (Owner, color, being_drawn, drawer_id, drawer_color
 for i in range(GRID_SIZE):  
     row = []
     for j in range(GRID_SIZE): 
-        current_square = (None, WHITE)
-        row.append(current_square) 
+        square = (None, WHITE)
+        row.append(square) 
     board_state.append(row)  
 
 menu_screen = MainMenu(WIDTH, HEIGHT)
