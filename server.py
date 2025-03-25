@@ -4,7 +4,10 @@ from constants import *
 from gamestate import Gamestate
 from models import Player
 
+SQUARES_NEEDED_TO_END_GAME = 2 #should be GRID_SIZE * GRID_SIZE
+
 def handle_single_player(client_socket, player_id):
+    global waiting
     new_player = Player(client_socket, player_id)
     game_state.add_player(new_player)
     game_state.add_player(Player(None, player_id + 1)) #added 2nd player for testing purposes
@@ -72,7 +75,9 @@ def handle_single_player(client_socket, player_id):
                 client_socket.send(str(new_player.id).encode())
             
             elif command[0] == "get_status":
-                if game_state.total_score == 1:
+                if waiting:
+                    client_socket.send("waiting".encode())
+                elif game_state.total_score == SQUARES_NEEDED_TO_END_GAME:
                     game_over = True
                     client_socket.send("game_over".encode())
                 else:
@@ -85,6 +90,10 @@ def handle_single_player(client_socket, player_id):
                         player_list.append((p.id, p.color, p.score))
                 players_json = json.dumps(player_list)
                 client_socket.send(players_json.encode())
+
+            elif command[0] == "start_game":
+                waiting = False
+                client_socket.send("Game started".encode())
 
         except Exception as e:
             print(f"Error: {e}")
@@ -100,6 +109,7 @@ server.listen()
 game_state = Gamestate()  #initialize the game state for the server
 player_id_counter = 1  
 game_over = False
+waiting = True
 
 # accept connection
 print("Server started")
