@@ -45,8 +45,8 @@ def handle_single_player(client_socket, player_id):
                 if 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE:
                     success = game_board.board[x][y].stop_drawing(new_player.id)
                     if command[3] == "claim":
-                        new_player.score += 1
-                        sucess = game_board.board[x][y].claim(new_player.id, new_player.color)
+                        game_state.add_score(new_player)
+                        success = game_board.board[x][y].claim(new_player.id, new_player.color)
                         if success:
                             client_socket.send(f"claimed".encode())
                         else:
@@ -63,12 +63,28 @@ def handle_single_player(client_socket, player_id):
                 client_socket.send(players_json.encode())
 
             elif command[0] == "exit":
-                game_state.remove_player(new_player)
+                if not game_over:
+                    game_state.remove_player(new_player)
                 client_socket.send("Exit accepted".encode())
                 break
             
             elif command[0] == "get_id":
                 client_socket.send(str(new_player.id).encode())
+            
+            elif command[0] == "get_status":
+                if game_state.total_score == 1:
+                    game_over = True
+                    client_socket.send("game_over".encode())
+                else:
+                    client_socket.send("playing".encode())
+            elif command[0] == "get_winners":
+                highest_score = game_state.get_highest_score()
+                player_list = []
+                for p in game_state.players:
+                    if p.score == highest_score:
+                        player_list.append((p.id, p.color, p.score))
+                players_json = json.dumps(player_list)
+                client_socket.send(players_json.encode())
 
         except Exception as e:
             print(f"Error: {e}")
@@ -83,6 +99,7 @@ server.bind(('0.0.0.0', 44444))
 server.listen()
 game_state = Gamestate()  #initialize the game state for the server
 player_id_counter = 1  
+game_over = False
 
 # accept connection
 print("Server started")
