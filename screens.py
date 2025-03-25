@@ -99,7 +99,7 @@ class EndScreen:
 
     def draw_game_over_screen(self, screen, winners, client_id):    
         
-        # Draw popup background
+        #draw background
         pygame.draw.rect(screen, WHITE, (self.x, self.y, self.width, self.height))
         pygame.draw.rect(screen, BLACK, (self.x, self.y, self.width, self.height), 3) #black border
         
@@ -139,3 +139,83 @@ class EndScreen:
         #draw button
         self.exit_button.check_hover(pygame.mouse.get_pos())    
         self.exit_button.draw(screen)
+
+class MainMenu:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.host_input = "127.0.0.1"
+        self.input_active = False #true when typing in box enabled
+        
+        #text box for input
+        input_width = 300
+        input_height = 40
+        self.text_box = pygame.Rect((width - input_width) // 2, height // 2, input_width, input_height)
+        
+        # Create connect button
+        button_width, button_height = 180, 60
+        button_x = (width - button_width) // 2
+        button_y = height // 2 + input_height + 30
+        self.connect_button = Button(button_x, button_y, button_width, button_height, "CONNECT")
+    
+    def draw(self, screen):
+        screen.fill(WHITE)
+        
+        #draw title
+        title_font = pygame.font.SysFont('Arial', 48, bold=True)
+        title = title_font.render("Deny and Conquer", True, BLACK)
+        title_rect = title.get_rect(center=(self.width // 2, 100))
+        screen.blit(title, title_rect)
+        
+        #draw message
+        subtitle_font = pygame.font.SysFont('Arial', 30)
+        subtitle = subtitle_font.render("Join Host", True, BLACK)
+        subtitle_rect = subtitle.get_rect(center=(self.width // 2, self.height // 2 - 50))
+        screen.blit(subtitle, subtitle_rect)
+        
+        #draw text box
+        if self.input_active:
+            border_color = (18, 184, 255)
+        else:
+            border_color = BLACK
+        pygame.draw.rect(screen, WHITE, self.text_box)
+        pygame.draw.rect(screen, border_color, self.text_box, 2) #draw border
+        
+        #draw the text
+        input_font = pygame.font.SysFont('Arial', 24)
+        input_text = input_font.render(self.host_input, True, BLACK)
+        text_rect = input_text.get_rect(midleft=(self.text_box.left + 10, self.text_box.centery))
+        screen.blit(input_text, text_rect)
+        
+        #draw connect button
+        self.connect_button.check_hover(pygame.mouse.get_pos())
+        self.connect_button.draw(screen)
+        
+        ##draw instruction message
+        instr_font = pygame.font.SysFont('Arial', 16)
+        instr_text = instr_font.render("Enter server IP address of HOST", True, BLACK)
+        instr_rect = instr_text.get_rect(center=(self.width // 2, self.height // 2 - 15))
+        screen.blit(instr_text, instr_rect)
+    
+    def handle_event(self, event):
+        #handle events
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            #check clicked on text box
+            self.input_active = self.text_box.collidepoint(event.pos)
+            
+            #check if click connected button
+            if self.connect_button.is_clicked(event.pos, True):
+                return self.host_input
+        
+        # handle kegboard
+        if event.type == pygame.KEYDOWN and self.input_active:
+            if event.key == pygame.K_RETURN:
+                self.input_active = False
+            elif event.key == pygame.K_BACKSPACE:
+                self.host_input = self.host_input[:-1] 
+            else:
+                
+                if len(self.host_input) < 30:  
+                    self.host_input += event.unicode
+        
+        return None 

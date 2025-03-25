@@ -104,7 +104,7 @@ def handle_single_player(client_socket, player_id):
 
 #start server
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('0.0.0.0', 44444))
+server.bind(('0.0.0.0', 50000))
 server.listen()
 game_state = Gamestate()  #initialize the game state for the server
 player_id_counter = 1  

@@ -3,7 +3,7 @@ import pygame
 import sys
 import json
 from constants import *
-from screens import StartScreen, EndScreen
+from screens import StartScreen, EndScreen, MainMenu
 
 #screen dimensions
 HEADER_HEIGHT = 50  #height of the top bar
@@ -16,9 +16,9 @@ BRUSH_SIZE = 5  #Radius of the brush size when drawing
 FILL_THRESHOLD = 0.5  
 
 # Game states
-GAME_STATE_START = 0    # Waiting for players to join and game to start
-GAME_STATE_PLAYING = 1  # Normal gameplay
-GAME_STATE_OVER = 2     # Game over screen
+GAME_STATE_START = 0    #start screen
+GAME_STATE_PLAYING = 1  
+GAME_STATE_OVER = 2    
 
 def recieve_player_info(client):
     data = client.recv(4096).decode()
@@ -36,7 +36,7 @@ def receive_board_state(client):
 
 
 def draw_header():
-    # Draw header background
+    #draw header background
     pygame.draw.rect(screen, (200,200,200), (0, 0, WIDTH, HEADER_HEIGHT))
     pygame.draw.line(screen, BLACK, (0, HEADER_HEIGHT), (WIDTH, HEADER_HEIGHT), 2)
     
@@ -45,20 +45,18 @@ def draw_header():
     for player in players:
         player_id, color, score = player
         
-        # Simple player text with ID and score
+        
         text = font.render(f"Player {player_id}: {score}", True, color)
         text_rect = text.get_rect(topleft=(player_x_pos, 15))
         
-        # Small color indicator
+        #small color indicator box next to player info
         pygame.draw.rect(screen, color, (player_x_pos - 15, 20, 10, 10))
-        
-        # Draw text
         screen.blit(text, text_rect)
         
-        # Move to next position
+        #move to next player position
         player_x_pos += text_rect.width + 30
 
-# Function to draw the game board
+#draw board onto screen
 def draw_board(board):
     #fill board white
     pygame.draw.rect(screen, WHITE, (0, HEADER_HEIGHT, WIDTH, BOARD_HEIGHT))
@@ -68,41 +66,39 @@ def draw_board(board):
         for col in range(GRID_SIZE):
             square = board[row][col]
             
-            # Unpack the square data (now includes drawing status)
-            if len(square) >= 5:  # New format with drawing info
+            # get the data from the square tuple
+            if len(square) >= 5: 
                 owner, color, being_drawn, drawer_id, drawer_color = square
-            else:  # Old format compatibility
+            else: 
                 owner, color = square
                 being_drawn, drawer_id, drawer_color = False, None, None
                 
-            # Calculate position with header offset
             board_x = col * SQUARE_SIZE
             board_y = HEADER_HEIGHT + row * SQUARE_SIZE
             
-            # Draw the base square color
+            #draw colours
             if owner is not None:
                 pygame.draw.rect(screen, color, (board_x, board_y, SQUARE_SIZE, SQUARE_SIZE))
             else:
                 pygame.draw.rect(screen, WHITE, (board_x, board_y, SQUARE_SIZE, SQUARE_SIZE))
                 
-            # If someone else is drawing on the square indicate with half opacity
+            #if someone else is drawing on a square indicate with transparent square colour
             if being_drawn and drawer_id != client_id:
-                # Create a transparent surface
+                
+                #draw transparanet surface
                 transparent_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
                 drawer_rgba = (drawer_color[0], drawer_color[1], drawer_color[2], 128)
                 transparent_surface.fill(drawer_rgba)
-                
-                #draw the transparent surface
+
                 screen.blit(transparent_surface, (board_x, board_y))
             
-            # Draw square border
+            #border drawing of square
             pygame.draw.rect(screen, BLACK, (board_x, board_y, SQUARE_SIZE, SQUARE_SIZE), 1)
     
     #if client drawing then draw the pixels
     if current_square and drawing:
         row, col = current_square
         for x, y in square_pixels:
-            # Convert local pixel coordinates to screen coordinates
             screen_x = col * SQUARE_SIZE + x
             screen_y = HEADER_HEIGHT + row * SQUARE_SIZE + y
             screen.set_at((screen_x, screen_y), PLAYER_COLORS[0])  #draw pixel
@@ -118,31 +114,21 @@ font = pygame.font.SysFont('Arial', 20)
 
 clock = pygame.time.Clock()
 
-#Connect to the server
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 44444))
-
-#inital welcome message
-print(client.recv(1024).decode())
-
 #drawing state variables
 current_square = None  
 drawing = False  
 square_pixels = set()  #pixels drawn in the square
 
-
 players = [] # list of (id, color, score) 
 
-# Game state variables
 current_game_state = GAME_STATE_START
-start_screen = StartScreen(WIDTH, HEIGHT)  # Create start screen
-end_screen = EndScreen(WIDTH, HEIGHT)  # Create end screen
+start_screen = StartScreen(WIDTH, HEIGHT) 
+end_screen = EndScreen(WIDTH, HEIGHT)  
 winners = []
 
-#Main game loop
 
 board_state = [] #2d list of (Owner, color, being_drawn, drawer_id, drawer_color) 
-
+#initial board state before game starts
 for i in range(GRID_SIZE):  
     row = []
     for j in range(GRID_SIZE): 
@@ -150,6 +136,33 @@ for i in range(GRID_SIZE):
         row.append(current_square) 
     board_state.append(row)  
 
+menu_screen = MainMenu(WIDTH, HEIGHT)
+ip_text = ""
+start = True
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+#loop for connecting screen only
+while start:
+    menu_screen.draw(screen)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        ip_text = menu_screen.handle_event(event)
+        if ip_text != None:
+            try :
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.settimeout(0.5)
+                client.connect((ip_text, 50000))
+                start = False
+
+                break
+            except Exception as e:
+                print(ip_text)
+                pass
+    pygame.display.flip()
+        
+print(client.recv(1024).decode())
 
 client.send("get_players".encode())
 players = recieve_player_info(client)
@@ -157,9 +170,8 @@ players = recieve_player_info(client)
 client.send("get_id".encode())
 client_id = int(client.recv(1024).decode())
 
-
+#main game loop
 running = True
-
 while running:
 
     #request player and board state at start of each loop
