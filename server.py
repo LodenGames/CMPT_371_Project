@@ -5,7 +5,6 @@ from constants import *
 from gamestate import Gamestate
 from models import Player
 
-
 # Game + server setup
 SQUARES_NEEDED_TO_END_GAME = GRID_SIZE * GRID_SIZE
 MAX_CLIENTS = 4
@@ -19,14 +18,16 @@ game_over = False
 waiting = True
 
 # Mutexes
-game_state_lock = threading.lock()
-game_status_lock = threading.lock()
-player_counter_lock = threading.lock()
+game_state_lock = threading.Lock()
+game_status_lock = threading.Lock()
+player_counter_lock = threading.Lock()
+
 
 # Function for each individual client thread
 def handle_client(client_socket, player_id):
 
     global waiting, game_over
+
     # prevent server from crashing unecessarily
     try:
 
@@ -206,3 +207,56 @@ def handle_client(client_socket, player_id):
             client_socket.close()
         except:
             pass
+
+
+# Main loop for listening and accepting client connections
+
+# create tcp server socket
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# avoid "address already in use" when restarting server
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# bind and listen for client connections
+try:
+    # bind server to set IP address and port number
+    server.bind((HOST, PORT))
+    # listen for connections
+    server.listen(MAX_CLIENTS)
+    print(f"Server started on {HOST}:{PORT}")
+
+    # -- main server loop for handling new connections --
+    while (True):
+        # accept a new connection, return new socket into client_socket
+        client_socket = server.accept()
+        # return clients address into address
+        address = server.accept()
+        print(f"Connection from {address}")
+
+        # lock player counter and assign unique player IDs
+        with (player_counter_lock):
+            # assign current id and increment player counter
+            current_player_id = player_id_counter
+            player_id_counter += 1
+        
+        # create new thread for each client
+        # assign handle_client as the thread func ptr and assign args to handle_client
+        client_thread = threading.Thread(target=handle_client, args=(client_socket, current_player_id))
+        # automatically exit thread when program ends
+        client_thread.daemon = True
+        # start the client thread
+        client_thread.start()
+
+except KeyboardInterrupt:
+    # if user uses Ctrl+C
+    print("Server shutting down...")
+
+except Exception as e:
+    # handle unexpected errors
+    print(f"Server error: {e}")
+
+finally:
+    # clean up and close the server socket
+    try:
+        server.close()
+    except:
+        pass
