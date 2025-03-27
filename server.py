@@ -232,7 +232,7 @@ def shutdown_server():
     print("Server shutdown complete.")
 
 # Thread function to monitor console commands
-def console_monitor():
+def monitor_console():
 
     global server_running
     
@@ -263,6 +263,10 @@ def console_monitor():
             print("  status - Show connected players")
             print("  help - Show this help message")
 
+        # if command is something else
+        else:
+            print(f"{cmd} is not valid... Please try again.")
+
 # bind and listen for client connections
 try:
     # bind server to set IP address and port number
@@ -277,12 +281,12 @@ try:
     print("  help - Show this help message")
 
 
-    # Start console monitoring thread
-    console_thread = threading.Thread(target=console_monitor)
+    # Start console monitoring thread to read from console and exec commands
+    console_thread = threading.Thread(target=monitor_console)
     console_thread.daemon = True
     console_thread.start()
 
-    # -- main server loop for handling new connections --
+    # main server loop for handling new connections
     while (server_running):
 
         # Set a timeout so we can check if server_running changed
@@ -316,11 +320,11 @@ try:
             client_thread.start()
 
         except socket.timeout:
-            # This is just to allow checking server_running periodically
+            # check if server_running flag still good
             continue
     
         except Exception as e:
-            if server_running:  # Only print error if we're still supposed to be running
+            if server_running:
                 print(f"Error accepting connection: {e}")
 
 except KeyboardInterrupt:
