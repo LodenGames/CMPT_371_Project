@@ -34,7 +34,7 @@ def handle_client(client_socket, player_id):
         # lock game state so only one thread has access
         with (game_state_lock):
             # create a new player with client socket and unique player_id
-            new_player = Player(client_socket, id)
+            new_player = Player(client_socket, player_id)
             game_state.add_player(new_player)
             print(f"Player {new_player.id} joined with color {new_player.color}")
         # send a message to the player to let them know they've joined
@@ -102,7 +102,7 @@ def handle_client(client_socket, player_id):
                             # increase players score
                             game_state.add_score(new_player)
                             # attempt to claim square
-                            success = game_state.board[x][y].claim(new_player.id, new_player.color)
+                            success = game_state.board.board[x][y].claim(new_player.id, new_player.color)
                             # check if game over condition met
                             if game_state.total_score >= SQUARES_NEEDED_TO_END_GAME:
                                 with (game_status_lock):
@@ -123,9 +123,9 @@ def handle_client(client_socket, player_id):
                 with (game_state_lock):
                     # access each player
                     player_list = []
-                    for player in player_list:
+                    for player in game_state.players:
                         # store ID, color, score
-                        player_list.append(player.id, player.color, player.score)
+                        player_list.append((player.id, player.color, player.score))
                 # send data to client
                 players_json = json.dumps(player_list)
                 client_socket.send(players_json.encode())
@@ -135,10 +135,10 @@ def handle_client(client_socket, player_id):
 
                 # lock the game and modify player list
                 with (game_state_lock):
-                    # remove player if game not over
+                    # remove player from game if its not over
                     if (not game_over):
                         game_state.remove_player(new_player)
-                # notify client that they exited successfully and disconnect
+                # notify client exit was succesful
                 client_socket.send("Exit Success".encode())
                 break
 
@@ -208,13 +208,60 @@ def handle_client(client_socket, player_id):
         except:
             pass
 
-
-# Main loop for listening and accepting client connections
-
 # create tcp server socket
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # avoid "address already in use" when restarting server
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# Flag to control server loop
+server_running = True
+# Function to handle server shutdown
+def shutdown_server():
+    global server_running
+    print("Initiating server shutdown...")
+    
+    # tell all clients about shutdown
+    with (game_state_lock):
+        for player in game_state.players:
+            try:
+                player.client_socket.send("server_shutdown".encode())
+            except:
+                pass
+    # change flag to false
+    server_running = False
+    print("Server shutdown complete.")
+
+# Thread function to monitor console commands
+def console_monitor():
+
+    global server_running
+    
+    while (server_running):
+        # get command from console
+        cmd = input()
+
+        # if command is kill
+        if (cmd.lower() == "kill"):
+            shutdown_server()
+            break
+        
+        # if command is status
+        elif (cmd.lower() == "status"):
+            # lock game state
+            with (game_state_lock):
+                # print number of active players
+                print(f"Active players: {len(game_state.players)}")
+                # print each player's ID and score
+                for player in game_state.players:
+                    print(f"Player {player.id} (score: {player.score})")
+
+        # if command is help
+        elif (cmd.lower() == "help"):
+            # print available commands
+            print("Available commands:")
+            print("  kill - Shut down the server")
+            print("  status - Show connected players")
+            print("  help - Show this help message")
 
 # bind and listen for client connections
 try:
@@ -222,33 +269,63 @@ try:
     server.bind((HOST, PORT))
     # listen for connections
     server.listen(MAX_CLIENTS)
-    print(f"Server started on {HOST}:{PORT}")
+    print(f"Server started on {HOST} : {PORT}")
+    # print initial message
+    print("Available commands:")
+    print("  kill - Shut down the server")
+    print("  status - Show connected players and their scores")
+    print("  help - Show this help message")
+
+
+    # Start console monitoring thread
+    console_thread = threading.Thread(target=console_monitor)
+    console_thread.daemon = True
+    console_thread.start()
 
     # -- main server loop for handling new connections --
-    while (True):
-        # accept a new connection, return new socket into client_socket
-        client_socket = server.accept()
-        # return clients address into address
-        address = server.accept()
-        print(f"Connection from {address}")
+    while (server_running):
 
-        # lock player counter and assign unique player IDs
-        with (player_counter_lock):
-            # assign current id and increment player counter
-            current_player_id = player_id_counter
-            player_id_counter += 1
-        
-        # create new thread for each client
-        # assign handle_client as the thread func ptr and assign args to handle_client
-        client_thread = threading.Thread(target=handle_client, args=(client_socket, current_player_id))
-        # automatically exit thread when program ends
-        client_thread.daemon = True
-        # start the client thread
-        client_thread.start()
+        # Set a timeout so we can check if server_running changed
+        server.settimeout(1.0)
+        try:
+            # accept a new connection, return new socket into client_socket
+            client_socket, address = server.accept()
+            print(f"Connection from {address}")
+
+            # Check if we already have MAX_CLIENTS (4) clients connected
+            with (game_state_lock):
+                # if 4 connected tell client to try again later
+                if len(game_state.players) >= MAX_CLIENTS:
+                    print(f"Rejected connection from {address}: Maximum number of players ({MAX_CLIENTS}) reached")
+                    client_socket.send("Server full. Try again later.".encode())
+                    client_socket.close()
+                    continue
+
+            # lock player counter and assign unique player IDs
+            with (player_counter_lock):
+                # assign current id and increment player counter
+                current_player_id = player_id_counter
+                player_id_counter += 1
+            
+            # create new thread for each client
+            # assign handle_client as the thread func ptr and assign args to handle_client
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, current_player_id))
+            # automatically exit thread when program ends
+            client_thread.daemon = True
+            # start the client thread
+            client_thread.start()
+
+        except socket.timeout:
+            # This is just to allow checking server_running periodically
+            continue
+    
+        except Exception as e:
+            if server_running:  # Only print error if we're still supposed to be running
+                print(f"Error accepting connection: {e}")
 
 except KeyboardInterrupt:
     # if user uses Ctrl+C
-    print("Server shutting down...")
+    shutdown_server()
 
 except Exception as e:
     # handle unexpected errors
