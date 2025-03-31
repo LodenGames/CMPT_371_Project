@@ -21,7 +21,7 @@ GAME_STATE_PLAYING = 1
 GAME_STATE_OVER = 2    
 
 def recieve_player_info(client):
-    data = client.recv(4096).decode()
+    data = client.recv(1024).decode()
     #take the (id, color, score) for each player
     players_json = json.loads(data)
     new_players = []
@@ -31,7 +31,7 @@ def recieve_player_info(client):
 
 
 def receive_board_state(client):
-    data = client.recv(4096).decode()
+    data = client.recv(1024).decode()
     return json.loads(data)
 
 
@@ -158,7 +158,10 @@ while start:
 
                 break
             except Exception as e:
+                print(f'Error {e}')
+                menu_screen.error_connecting()
                 print(ip_text)
+                
                 pass
     pygame.display.flip()
         

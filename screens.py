@@ -56,7 +56,7 @@ class StartScreen:
         screen.fill(WHITE)
         
         #draw title
-        title_font = pygame.font.SysFont('Arial', 48, bold=True)
+        title_font = pygame.font.SysFont('Arial', 36, bold=True)
         title = title_font.render("Deny and Conquer", True, BLACK)
         title_rect = title.get_rect(center=(self.width // 2, 100))
         screen.blit(title, title_rect)
@@ -105,11 +105,11 @@ class EndScreen:
     def draw_game_over_screen(self, screen, winners, client_id):    
         
         #draw background
-        pygame.draw.rect(screen, WHITE, (self.x, self.y, self.width, self.height))
-        pygame.draw.rect(screen, BLACK, (self.x, self.y, self.width, self.height), 3) #black border
+        pygame.draw.rect(screen, WHITE, (self.x-50, self.y, self.width+100, self.height))
+        pygame.draw.rect(screen, BLACK, (self.x-50, self.y, self.width+100, self.height), 3) #black border
         
         #sraw title
-        title_font = pygame.font.SysFont('Arial', 48, bold=True)
+        title_font = pygame.font.SysFont('Arial', 36, bold=True)
         title = title_font.render("GAME OVER", True, BLACK)
         title_rect = title.get_rect(center=(self.total_width // 2, self.y + 50))
         screen.blit(title, title_rect)
@@ -151,6 +151,8 @@ class MainMenu:
         self.height = height
         self.host_input = "127.0.0.1"
         self.input_active = False #true when typing in box enabled
+        self.error_connect = False
+        self.error_host = ""
         
         #text box for input
         input_width = 300
@@ -167,9 +169,9 @@ class MainMenu:
         screen.fill(WHITE)
         
         #draw title
-        title_font = pygame.font.SysFont('Arial', 48, bold=True)
+        title_font = pygame.font.SysFont('Arial', 36, bold=True)
         title = title_font.render("Deny and Conquer", True, BLACK)
-        title_rect = title.get_rect(center=(self.width // 2, 100))
+        title_rect = title.get_rect(center=(self.width // 2, 50))
         screen.blit(title, title_rect)
         
         #draw message
@@ -196,12 +198,25 @@ class MainMenu:
         self.connect_button.check_hover(pygame.mouse.get_pos())
         self.connect_button.draw(screen)
         
-        ##draw instruction message
+        #draw instruction message
         instr_font = pygame.font.SysFont('Arial', 16)
         instr_text = instr_font.render("Enter server IP address of HOST", True, BLACK)
         instr_rect = instr_text.get_rect(center=(self.width // 2, self.height // 2 - 15))
         screen.blit(instr_text, instr_rect)
-    
+
+        # draw connect error message
+        subtitle_font = pygame.font.SysFont('Arial', 30)
+        if self.error_connect:
+            subtitle = subtitle_font.render(f"No Server at {self.error_host}", True, RED)
+        else:
+            subtitle = subtitle_font.render("", True, BLACK)
+        subtitle_rect = subtitle.get_rect(center=(self.width // 2, self.height // 2 - 100))
+        screen.blit(subtitle, subtitle_rect)
+
+    def error_connecting(self):
+        self.error_connect = True
+        self.error_host = self.host_input
+
     def handle_event(self, event):
         #handle events
         if event.type == pygame.MOUSEBUTTONDOWN:

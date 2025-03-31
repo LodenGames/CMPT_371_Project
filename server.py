@@ -1,5 +1,6 @@
 import socket
 import json
+import sys
 import threading
 from constants import *
 from gamestate import Gamestate
@@ -8,8 +9,12 @@ from models import Player
 # Game + server setup
 SQUARES_NEEDED_TO_END_GAME = GRID_SIZE * GRID_SIZE
 MAX_CLIENTS = 4
-HOST = "0.0.0.0"
 PORT = 50000
+
+if (len(sys.argv) == 2):
+    HOST = sys.argv[1]
+else:
+    raise Exception ("Please provide 1 command line argument containing the server IP Address\n python server.py 192.168.0.1")
 
 # Global game state
 game_state = Gamestate()
@@ -80,7 +85,7 @@ def handle_client(client_socket, player_id):
                             client_socket.send("success".encode())
                         # if not successful
                         else:
-                            client_socket.send("failure to draw".encode())
+                            client_socket.send("Someone Else is Drawing on that square (Mutex Lock)".encode())
                 # coords were invalid
                 else:
                     client_socket.send("Invalid coordinates".encode())

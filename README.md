@@ -34,7 +34,8 @@ One player must start the game server before others can join.
 2. Run the following command:
 
 ```sh
-python server.py
+python server.py IP-Address
+# example) python server.py 192.168.22.1
 ```
 
 ### Client Connection
@@ -49,3 +50,4 @@ game.
 ```sh
 python client.py
 ```
+3. Input the same IP-Address in the pygame text box as you used when starting server.py
