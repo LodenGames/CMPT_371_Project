@@ -4,24 +4,10 @@ import sys
 import json
 from constants import *
 from screens import StartScreen, EndScreen, MainMenu
-
-#screen dimensions
-HEADER_HEIGHT = 50  #height of the top bar
-BOARD_HEIGHT = SQUARE_SIZE * GRID_SIZE
-WIDTH = SQUARE_SIZE * GRID_SIZE
-HEIGHT = BOARD_HEIGHT + HEADER_HEIGHT
-
-#for drawing 
-BRUSH_SIZE = 5  #Radius of the brush size when drawing
-FILL_THRESHOLD = 0.5  
-
-# Game states
-GAME_STATE_START = 0    #start screen
-GAME_STATE_PLAYING = 1  
-GAME_STATE_OVER = 2    
+ 
 
 def recieve_player_info(client):
-    data = client.recv(1024).decode()
+    data = client.recv(RECV_SIZE).decode()
     #take the (id, color, score) for each player
     players_json = json.loads(data)
     new_players = []
@@ -31,7 +17,7 @@ def recieve_player_info(client):
 
 
 def receive_board_state(client):
-    data = client.recv(1024).decode()
+    data = client.recv(RECV_SIZE).decode()
     return json.loads(data)
 
 
@@ -45,8 +31,11 @@ def draw_header():
     for player in players:
         player_id, color, score = player
         
-        
-        text = font.render(f"Player {player_id}: {score}", True, color)
+        player_text = f"Player {player_id}: {score}"
+        if player_id == client_id:
+            player_text += " (You)"
+            
+        text = font.render(player_text, True, color)
         text_rect = text.get_rect(topleft=(player_x_pos, 15))
         
         #small color indicator box next to player info
@@ -98,16 +87,27 @@ def draw_board(board):
     #if client drawing then draw the pixels
     if current_square and drawing:
         row, col = current_square
+        # Find the player's color based on client_id
+        player_color = None
+        for player in players:
+            if player[0] == client_id:
+                player_color = player[1] 
+                break
+        
+        # If player_color wasn't found for some reason, fallback to PLAYER_COLORS index
+        if player_color is None:
+            player_color = PLAYER_COLORS[(client_id - 1) % len(PLAYER_COLORS)]
+            
         for x, y in square_pixels:
             screen_x = col * SQUARE_SIZE + x
             screen_y = HEADER_HEIGHT + row * SQUARE_SIZE + y
-            screen.set_at((screen_x, screen_y), PLAYER_COLORS[0])  #draw pixel
+            screen.set_at((screen_x, screen_y), player_color)
     
 
 #initializing pygame and its properties
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Deny and Conquer")
+pygame.display.set_caption(f"Deny and Conquer")
 
 pygame.font.init()
 font = pygame.font.SysFont('Arial', 20)
@@ -165,13 +165,13 @@ while start:
                 pass
     pygame.display.flip()
         
-print(client.recv(1024).decode())
+print(client.recv(RECV_SIZE).decode())
 
 client.send("get_players".encode())
 players = recieve_player_info(client)
 
 client.send("get_id".encode())
-client_id = int(client.recv(1024).decode())
+client_id = int(client.recv(RECV_SIZE).decode())
 
 #main game loop
 running = True
@@ -183,7 +183,7 @@ while running:
 
     # Check game status
     client.send("get_status".encode())
-    status = client.recv(1024).decode()
+    status = client.recv(RECV_SIZE).decode()
     
     if status == "waiting" and current_game_state != GAME_STATE_START:
         current_game_state = GAME_STATE_START
@@ -212,7 +212,7 @@ while running:
                 if start_screen.start_button.is_clicked(pos, True):
                     # Send start game command to server
                     client.send("start_game".encode())
-                    response = client.recv(1024).decode()
+                    response = client.recv(RECV_SIZE).decode()
                     print(f"Start game response: {response}")
     
     elif current_game_state == GAME_STATE_OVER:
@@ -264,7 +264,7 @@ while running:
                     if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
                         print(f"Clicked at ({row}, {col})")
                         client.send(f"start_drawing {row} {col}".encode())
-                        response = client.recv(1024).decode("utf-8")
+                        response = client.recv(RECV_SIZE).decode("utf-8")
                         print(response)
                         if response == "success":
                             current_square = (row, col)
@@ -285,7 +285,7 @@ while running:
                 else:
                     message += f" no_claim"
                 client.send(message.encode())   
-                print(client.recv(1024).decode("utf-8"))         
+                print(client.recv(RECV_SIZE).decode("utf-8"))         
                 #reset drawing state square
                 drawing = False
                 current_square = None
@@ -320,7 +320,7 @@ while running:
     clock.tick(60) #set max fps to 60
 
 #exit message before quiting
-print(client.recv(1024).decode())
+print(client.recv(RECV_SIZE).decode())
 client.close()
 pygame.quit()
 sys.exit()

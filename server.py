@@ -6,11 +6,6 @@ from constants import *
 from gamestate import Gamestate
 from models import Player
 
-# Game + server setup
-SQUARES_NEEDED_TO_END_GAME = GRID_SIZE * GRID_SIZE
-MAX_CLIENTS = 4
-PORT = 50000
-
 if (len(sys.argv) == 2):
     HOST = sys.argv[1]
 else:
@@ -21,6 +16,7 @@ game_state = Gamestate()
 player_id_counter = 1
 game_over = False
 waiting = True
+available_ids = []
 
 # Mutexes
 game_state_lock = threading.Lock()
@@ -203,7 +199,12 @@ def handle_client(client_socket, player_id):
         # try to remove player from game state securely
         with (game_state_lock):
             try:
+                # remove player from game state
                 game_state.remove_player(new_player)
+                # make their ID useable again
+                with (player_counter_lock):
+                    available_ids.append(player_id)
+                    available_ids.sort()
             except:
                 pass
 
@@ -310,11 +311,16 @@ try:
                     client_socket.close()
                     continue
 
-            # lock player counter and assign unique player IDs
+            # lock player counter 
             with (player_counter_lock):
-                # assign current id and increment player counter
-                current_player_id = player_id_counter
-                player_id_counter += 1
+                # if a player disconnected use that ID
+                if available_ids:
+                    # reuse the lowest available ID
+                    current_player_id = available_ids.pop(0)
+                else:
+                    # assign a new ID if none to reuse
+                    current_player_id = player_id_counter
+                    player_id_counter += 1
             
             # create new thread for each client
             # assign handle_client as the thread func ptr and assign args to handle_client
