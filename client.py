@@ -17,8 +17,18 @@ def recieve_player_info(client):
 
 
 def receive_board_state(client):
-    data = client.recv(RECV_SIZE).decode()
-    return json.loads(data)
+    #for handling multiple packets since board state can be large
+    buffer = b''
+    while True:
+        chunk = client.recv(RECV_SIZE)
+        if not chunk:
+            break 
+        buffer += chunk
+        if b'\n' in buffer:
+            break
+    #remove the newline then return the json data
+    json_str = buffer.decode().strip() 
+    return json.loads(json_str)
 
 
 def draw_header():
@@ -152,7 +162,7 @@ while start:
         if ip_text != None:
             try :
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.settimeout(0.5)
+                client.settimeout(2)
                 client.connect((ip_text, 50000))
                 start = False
 
