@@ -63,7 +63,8 @@ def handle_client(client_socket, player_id):
                     current_board_state = game_state.board.get_board_state()
                 # send board state to client
                 current_board_state_json = json.dumps(current_board_state)
-                client_socket.send(current_board_state_json.encode())
+                message = (current_board_state_json + '\n').encode()
+                client_socket.sendall(message)
             
             # client wants to draw on a square
             elif (command[0] == "start_drawing"):
