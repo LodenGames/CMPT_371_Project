@@ -162,7 +162,7 @@ while start:
         if ip_text != None:
             try :
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.settimeout(0.5)
+                client.settimeout(2)
                 client.connect((ip_text, 50000))
                 start = False
 
