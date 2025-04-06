@@ -17,6 +17,7 @@ player_id_counter = 1
 game_over = False
 waiting = True
 available_ids = []
+winners = []
 
 # Mutexes
 game_state_lock = threading.Lock()
@@ -27,7 +28,7 @@ player_counter_lock = threading.Lock()
 # Function for each individual client thread
 def handle_client(client_socket, player_id):
 
-    global waiting, game_over
+    global waiting, game_over, winners
 
     # prevent server from crashing unecessarily
     try:
@@ -169,12 +170,12 @@ def handle_client(client_socket, player_id):
                     # get highest score in the game
                     highest_score = game_state.get_highest_score()
                     # find players with highest score
-                    player_list = []
-                    for player in game_state.players:
-                        if player.score == highest_score:
-                            player_list.append((player.id, player.color, player.score))
+                    if len(winners) == 0:
+                        for player in game_state.players:
+                            if player.score == highest_score:
+                                winners.append((player.id, player.color, player.score))
                 # send winners list to client
-                players_json = json.dumps(player_list)
+                players_json = json.dumps(winners)
                 client_socket.send(players_json.encode())
 
             # client wants to start the game

@@ -5,8 +5,8 @@ GREEN = (128, 255, 0)
 BLUE = (0, 150, 255)
 YELLOW = (255, 255, 0)
 PLAYER_COLORS = [RED, GREEN, BLUE, YELLOW]
-GRID_SIZE = 8
-SQUARE_SIZE = 80
+GRID_SIZE = 4
+SQUARE_SIZE = 100
 
 #screen dimensions
 HEADER_HEIGHT = 50  #height of the top bar
